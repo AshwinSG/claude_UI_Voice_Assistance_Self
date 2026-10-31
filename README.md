@@ -1,11 +1,12 @@
 # Voice Chat – Local Speech-to-Text Desktop App
 
-A small desktop app built with **PySide6 (Qt)** that records your voice and transcribes it **locally** with [OpenAI Whisper](https://github.com/openai/whisper). Click **Record**, speak, then click **Stop**. Your words appear in the conversation window.
+A small desktop app built with **PySide6 (Qt)** that records your voice and transcribes it **locally** with [OpenAI Whisper](https://github.com/openai/whisper). Click **Record**, speak, then click **Stop**. Your words appear in the conversation window, and Mira, the pixel-art character, reacts as you speak.
 
 No audio leaves your machine. Transcription runs entirely offline once the model has been downloaded.
 
 ## Features
 
+- Animated character: Mira listens while you speak and idles otherwise
 - One-click record/stop toggle
 - Local speech-to-text with Whisper (`base` model by default)
 - Chat-style transcript window with a **Clear** button
@@ -42,6 +43,7 @@ python3 app.py
 
 1. Wait for the status to change from **Loading Whisper model...** to **Ready**.
 2. Click **● Record** and speak.
+   Mira listens while your voice is detected and returns to idle when you pause.
 3. Click **■ Stop**. The status shows **Transcribing...**, and then your text appears in the window as `You: ...`.
 4. Click **Clear** to empty the conversation.
 
@@ -57,6 +59,9 @@ Edit the constants at the top of [`app.py`](app.py):
 |---------------|----------|-------------|
 | `MODEL_NAME`  | `"base"` | Whisper model: `tiny`, `base`, `small`, `medium`, `large`. Larger models are more accurate but slower and use more memory. |
 | `SAMPLE_RATE` | `16000`  | Microphone sample rate in Hz. Whisper expects 16 kHz audio. |
+| `SPRITE_SCALE` | `4` | How many times larger Mira is drawn than the 40×56 sprite. |
+| `SPEECH_THRESHOLD` | `0.01` | Mic RMS level that counts as speaking. Lower it if Mira misses your voice; raise it if background noise triggers Mira. |
+| `SPEECH_HOLD_SECONDS` | `0.6` | How long Mira keeps listening after your voice stops, so the animation doesn't flicker between words. |
 
 ## How It Works
 
@@ -72,6 +77,8 @@ Microphone ──► sounddevice InputStream ──► audio chunks (float32, 16
 
 - **`VoiceApp`** is the main Qt window: transcript (`QTextEdit`), Record and Clear buttons, and a status label.
 - **`Signals`** is a `QObject` whose Qt signals let background threads update the UI safely, because Qt widgets may only be touched from the main thread.
+- **`MiraSprite`** is a `QLabel` that cuts animation frames from the sprite sheet, using the rectangles and fps in `mira_spritesheet.json`, and plays them on a `QTimer`.
+- **`_audio_callback`** measures the mic level of each audio block and signals the UI when you start or stop speaking, which switches Mira between `listen` and `idle`. The `talk` animation is loaded but not used yet.
 - **`_load_model`** loads Whisper on a background thread at startup. The Record button stays disabled until it is ready.
 - **`_start_recording` / `_stop_recording`** open and close a `sounddevice` input stream. Its callback appends each audio block to a buffer.
 - **`_transcribe`** runs Whisper on the captured audio on a background thread and emits the result to the chat window.
@@ -91,6 +98,7 @@ Microphone ──► sounddevice InputStream ──► audio chunks (float32, 16
 ```
 .
 ├── app.py             # The application
+├── mira_sprites/      # Mira's sprite sheet, animation data, frames and GIFs
 ├── requirements.txt   # Python dependencies
 ├── .gitignore
 └── README.md
@@ -99,6 +107,6 @@ Microphone ──► sounddevice InputStream ──► audio chunks (float32, 16
 ## Roadmap Ideas
 
 - Send transcribed text to an AI assistant (e.g. Claude) and show its replies in the chat
-- Text-to-speech for assistant responses
+- Text-to-speech for assistant responses, with Mira's `talk` animation
 - Push-to-talk hotkey
 - Model selector in the UI

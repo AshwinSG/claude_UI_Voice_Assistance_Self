@@ -2,3 +2,4 @@ openai-whisper
 sounddevice
 numpy
 PySide6
+piper-tts
